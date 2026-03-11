@@ -1,42 +1,64 @@
-# sv
+# Accounting Sample Web UI
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+A SvelteKit frontend for the [Accounting API](../). Exercises all core API functions: authentication, vault/encryption, accounts, and transactions.
 
-## Creating a project
+## Prerequisites
 
-If you're seeing this, you've probably already done this step. Congrats!
+- Node.js 18+
+- The Accounting API backend running on `http://localhost:8080` (see parent directory)
 
-```sh
-# create a new project
-npx sv create my-app
-```
-
-To recreate this project with the same configuration:
+## Setup
 
 ```sh
-# recreate this project
-npx sv@0.12.5 create --template minimal --types ts --install npm accounting-sample-web-ui
+npm install
 ```
 
-## Developing
+## Development
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+Start the backend first (from the parent directory):
+
+```sh
+docker-compose up -d
+# or: cargo run
+```
+
+Then start the frontend dev server:
 
 ```sh
 npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
 ```
 
-## Building
+The Vite dev server (port 5173) proxies `/api`, `/health`, and `/deployment` requests to `http://localhost:8080` automatically. No environment variables needed for local development.
 
-To create a production version of your app:
+## Environment Variables
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `VITE_API_URL` | _(empty — uses relative URLs)_ | Override API base URL for cross-origin deployments |
+
+For local development with the Vite proxy, leave `VITE_API_URL` unset. For production or when the API is on a different host:
+
+```sh
+VITE_API_URL=https://api.example.com npm run build
+```
+
+## Build
 
 ```sh
 npm run build
+npm run preview   # preview the production build locally
 ```
 
-You can preview the production build with `npm run preview`.
+## Type Checking
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+```sh
+npm run check
+```
+
+## What's Covered
+
+- **Auth**: Register, login, logout, profile view, automatic JWT refresh on 401
+- **Vault**: Zero-knowledge encryption setup, unlock, lock, status indicator
+- **Accounts**: List (with filters), create, view, edit (optimistic locking), delete
+- **Transactions**: List (with filters), create (context-dependent amount UX), split transactions with ledger entries, view, edit (optimistic locking), delete
+- **Health**: API liveness and readiness status display
