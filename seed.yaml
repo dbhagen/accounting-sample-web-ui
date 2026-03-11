@@ -1,0 +1,141 @@
+goal: >
+  Build a SvelteKit web UI that serves as a sample frontend for the Accounting API,
+  exercising all core API functions (auth, session/vault, accounts, transactions)
+  with proper JWT management and zero-knowledge encryption vault workflow.
+
+constraints:
+  - SvelteKit with TypeScript (migrate from existing minimal Svelte scaffold)
+  - Tailwind CSS for styling (functional, not fancy)
+  - API base URL via VITE_API_URL environment variable, defaulting to http://localhost:8080
+  - Fully dependent on the Accounting API backend (parent directory)
+  - Sub-module in its own git repository
+  - No institution/extension endpoints (core scope only)
+  - All monetary values handled as string decimals, never floats
+  - Must stay runnable after every change (executable-first methodology)
+
+acceptance_criteria:
+  # Auth
+  - User can register a new account (email, password, display name)
+  - User can log in with email/password and receive JWT tokens
+  - User can log out (invalidates refresh token)
+  - User can view their profile via /auth/me
+  - JWT auto-refresh on 401 (intercept, call /auth/refresh, retry original request)
+
+  # Session / Vault
+  - User can set up zero-knowledge encryption (passphrase via /session/setup)
+  - User can unlock vault with passphrase (/session/unlock)
+  - User can lock vault (/session/lock)
+  - Vault status indicator visible in UI (/session/status)
+
+  # Accounts
+  - List accounts with filter support (type, currency, active status)
+  - Create new account (name, type, currency)
+  - View single account details
+  - Update account with optimistic locking (version field)
+  - Delete account
+  - View transactions for a specific account
+
+  # Transactions
+  - List transactions with filters (date range, category, reconciled status, account)
+  - Create transaction with context-dependent amount UX (income shows inflow field, expense shows outflow field, other auto-zeroed)
+  - Create split transactions with child splits and ledger entries
+  - View single transaction details
+  - Update transaction with optimistic locking (version field)
+  - Delete transaction
+
+  # Health
+  - Display API health/readiness status somewhere in the UI
+
+ontology_schema:
+  name: AccountingWebUI
+  description: >
+    Domain model for the Accounting API frontend, mirroring the backend
+    REST resources with client-side state management for auth, vault,
+    accounts, and transactions.
+  fields:
+    - name: auth_state
+      type: object
+      description: >
+        Client auth state: access_token, refresh_token, user profile,
+        login/register status, token expiry tracking
+
+    - name: vault_state
+      type: object
+      description: >
+        Vault/session state: unlocked boolean, session_id, key_derivation_params,
+        verification_payload, passphrase setup status
+
+    - name: accounts
+      type: array
+      description: >
+        List of Account objects: id (uuid), name, account_type, currency,
+        balance, is_active, metadata (jsonb), version (optimistic lock),
+        display_order, created_at, updated_at
+
+    - name: transactions
+      type: array
+      description: >
+        List of Transaction objects: id (uuid), account_id, inflow (decimal string),
+        outflow (decimal string), payee, memo, category (colon-separated hierarchy),
+        entered_date, cleared_date, reconciled, is_split_parent, split_parent_id,
+        metadata (jsonb), version (optimistic lock)
+
+    - name: ledger_entries
+      type: array
+      description: >
+        Ledger entries for split/multi-leg transactions: account_id, entry_type
+        (debit/credit), amount (decimal string), currency, description
+
+    - name: api_client
+      type: object
+      description: >
+        Fetch wrapper with base URL config, JWT header injection,
+        automatic 401 interception and token refresh retry logic
+
+evaluation_principles:
+  - name: api_coverage
+    description: All specified API endpoints are exercised through the UI
+    weight: 0.9
+
+  - name: functional_correctness
+    description: Forms submit correct payloads, responses are properly parsed and displayed
+    weight: 0.9
+
+  - name: auth_flow
+    description: JWT lifecycle works end-to-end (login, auto-refresh, logout)
+    weight: 0.8
+
+  - name: vault_workflow
+    description: Zero-knowledge encryption setup/unlock/lock/status works correctly
+    weight: 0.7
+
+  - name: optimistic_locking
+    description: Updates send version field, 409 conflicts are handled gracefully
+    weight: 0.7
+
+  - name: split_transactions
+    description: Split parent + child transactions with ledger entries can be created
+    weight: 0.6
+
+  - name: simplicity
+    description: UI is functional and straightforward, not over-engineered
+    weight: 0.5
+
+exit_conditions:
+  - name: all_endpoints_covered
+    description: Every core API endpoint has a corresponding UI interaction
+    criteria: Auth (5), Session (4), Accounts (6), Transactions (5) endpoints all reachable
+
+  - name: app_runs
+    description: Application starts and is usable in a browser
+    criteria: npm run dev serves the app, all pages render, no console errors on basic flows
+
+  - name: auth_cycle_works
+    description: Complete auth lifecycle functions
+    criteria: Register -> login -> use app -> token refresh -> logout all work
+
+metadata:
+  version: "1.0"
+  created: "2026-03-10"
+  source: ouroboros_interview_fallback
+  ambiguity_score: 0.1
